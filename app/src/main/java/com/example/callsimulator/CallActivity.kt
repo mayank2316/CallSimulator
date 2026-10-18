@@ -115,29 +115,35 @@ class CallActivity : ComponentActivity() {
                                                 onDragEnd = {
                                                     when {
                                                         sliderOffset <= -maxDragPx * 0.55f -> finish("Rejected")
-                                                        sliderOffset >= maxDragPx * 0.55f -> { ringtone?.stop(); startedAt = SystemClock.elapsedRealtime(); state = "connected"; if (callId.isNotBlank()) CallStore.updateStatus(this@CallActivity, callId, "Accepted") }
+                                                        sliderOffset >= maxDragPx * 0.55f -> {
+                                                            ringtone?.stop()
+                                                            startedAt = SystemClock.elapsedRealtime()
+                                                            state = "connected"
+                                                            if (callId.isNotBlank()) CallStore.updateStatus(this@CallActivity, callId, "Accepted")
+                                                        }
                                                     }
                                                     sliderOffset = 0f
                                                 },
                                                 onDragCancel = { sliderOffset = 0f },
-                                                onDrag = { change, dragAmount -> change.consume(); sliderOffset = (sliderOffset + dragAmount.x).coerceIn(-maxDragPx, maxDragPx) }
+                                                onDrag = { change, dragAmount ->
+                                                    change.consume()
+                                                    sliderOffset = (sliderOffset + dragAmount.x).coerceIn(-maxDragPx, maxDragPx)
+                                                }
                                             )
                                         },
                                         shape = RoundedCornerShape(42.dp),
-                                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White, contentColor = if (sliderOffset < 0) Color(0xFFE76D6D) else Color(0xFF50B879))
+                                        colors = IconButtonDefaults.filledIconButtonColors(
+                                            containerColor = Color.White,
+                                            contentColor = if (sliderOffset < 0) Color(0xFFE76D6D) else Color(0xFF50B879)
+                                        )
                                     ) {
-                                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                if (sliderOffset < -maxDragPx * 0.12f) Icons.Rounded.CallEnd else Icons.Rounded.Call,
-                                                "Swipe left to decline or right to answer",
-                                                modifier = Modifier.size(34.dp),
-                                                tint = if (sliderOffset < -maxDragPx * 0.12f) Color(0xFFE76D6D) else Color(0xFF50B879)
-                                            )
-                                        }
-                                        }
+                                        Icon(
+                                            if (sliderOffset < -maxDragPx * 0.12f) Icons.Rounded.CallEnd else Icons.Rounded.Call,
+                                            "Swipe left to decline or right to answer",
+                                            modifier = Modifier.size(34.dp),
+                                            tint = if (sliderOffset < -maxDragPx * 0.12f) Color(0xFFE76D6D) else Color(0xFF50B879)
+                                        )
                                     }
-                                }
-                            }
                             Spacer(Modifier.height(60.dp))
                         }
                         else -> Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp), modifier = Modifier.fillMaxWidth()) {
