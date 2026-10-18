@@ -89,7 +89,7 @@ class CallActivity : ComponentActivity() {
                     when (state) {
                         "ringing" -> Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
                             Spacer(Modifier.height(72.dp))
-                            Text(caller.trim(), color = fg, fontSize = 38.sp, fontWeight = FontWeight.Normal, maxLines = 3, softWrap = true, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            Text(caller.trim(), color = fg, fontSize = 30.sp, lineHeight = 36.sp, fontWeight = FontWeight.Normal, maxLines = 4, softWrap = true, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                             Spacer(Modifier.height(8.dp))
                             Text(if (number.isBlank()) "Mobile" else number, color = secondary, fontSize = 19.sp, maxLines = 1)
                             Spacer(Modifier.weight(0.6f))
@@ -107,7 +107,7 @@ class CallActivity : ComponentActivity() {
                                     val maxDragPx = with(density) { maxDragDp.toPx() }
                                     Row(Modifier.fillMaxSize().padding(horizontal = 22.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                                         Text("Decline", color = if (sliderOffset < -maxDragPx * 0.12f) Color(0xFFE76D6D) else fg, fontSize = 18.sp, maxLines = 1)
-                                        Text("Answer", color = if (sliderOffset > maxDragPx * 0.12f) Color(0xFF55BA7A) else fg, fontSize = 16.sp, maxLines = 1)
+                                        Text("Answer", color = if (sliderOffset > maxDragPx * 0.12f) Color(0xFF55BA7A) else fg, fontSize = 18.sp, maxLines = 1)
                                     }
                                     FilledIconButton(
                                         onClick = { },
@@ -130,9 +130,9 @@ class CallActivity : ComponentActivity() {
                                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                             if (photoUri.isNotBlank()) {
                                                 AndroidView(factory = { context -> ImageView(context).apply { scaleType = ImageView.ScaleType.CENTER_CROP; setImageBitmap(loadCallerPhoto(context, photoUri)) } }, update = { view -> view.setImageBitmap(loadCallerPhoto(view.context, photoUri)) }, modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(42.dp)))
-                                            } else { Icon(Icons.Rounded.Person, "Caller photo", modifier = Modifier.size(36.dp), tint = Color(0xFF50B879)) }
+                                            } else { Icon(Icons.Rounded.Call, "Answer call", modifier = Modifier.size(34.dp), tint = Color(0xFF50B879)) }
                                             val progress = (kotlin.math.abs(sliderOffset) / maxDragPx.coerceAtLeast(1f)).coerceIn(0f, 1f)
-                                            Icon(if (sliderOffset < -maxDragPx * 0.12f) Icons.Rounded.CallEnd else Icons.Rounded.Call, "Swipe left to decline or right to answer", modifier = Modifier.size(26.dp).rotate(if (sliderOffset < 0f) -90f * progress else 90f * progress), tint = Color.White)
+                                            Icon(if (sliderOffset < -maxDragPx * 0.12f) Icons.Rounded.CallEnd else Icons.Rounded.Call, "Swipe left to decline or right to answer", modifier = Modifier.size(26.dp).rotate(if (sliderOffset < 0f) -90f * progress else 90f * progress), tint = Color(0xFF50B879))
                                         }
                                     }
                                 }
