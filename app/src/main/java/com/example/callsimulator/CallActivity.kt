@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -123,7 +124,15 @@ class CallActivity : ComponentActivity() {
                                         },
                                         shape = RoundedCornerShape(42.dp),
                                         colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White, contentColor = if (sliderOffset < 0) Color(0xFFE76D6D) else Color(0xFF50B879))
-                                    ) { Icon(if (sliderOffset < -maxDragPx * 0.15f) Icons.Rounded.CallEnd else Icons.Rounded.Call, "Swipe left to decline or right to answer", modifier = Modifier.size(34.dp)) }
+                                    ) {
+                                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                            if (photoUri.isNotBlank()) {
+                                                AndroidView(factory = { context -> ImageView(context).apply { scaleType = ImageView.ScaleType.CENTER_CROP; setImageURI(runCatching { Uri.parse(photoUri) }.getOrNull()) } }, update = { view -> runCatching { view.setImageURI(Uri.parse(photoUri)) } }, modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(42.dp)))
+                                            } else { Icon(Icons.Rounded.Person, "Caller photo", modifier = Modifier.size(36.dp), tint = Color(0xFF50B879)) }
+                                            val progress = (kotlin.math.abs(sliderOffset) / maxDragPx.coerceAtLeast(1f)).coerceIn(0f, 1f)
+                                            Icon(if (sliderOffset < -maxDragPx * 0.12f) Icons.Rounded.CallEnd else Icons.Rounded.Call, "Swipe left to decline or right to answer", modifier = Modifier.size(26.dp).rotate(if (sliderOffset < 0f) -90f * progress else 90f * progress), tint = Color.White)
+                                        }
+                                    }
                                 }
                             }
                             Spacer(Modifier.height(60.dp))
