@@ -2,6 +2,11 @@ package com.example.callsimulator
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.app.AlarmManager
+import android.os.Build
+import android.provider.Settings
+import android.Manifest
+import android.content.pm.PackageManager
 import android.content.Intent
 import android.media.AudioAttributes
 import android.media.Ringtone
@@ -38,6 +43,7 @@ import java.util.Date
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) { requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1001) }
         setContent { CallSimulatorApp() }
     }
 }
@@ -48,6 +54,11 @@ fun CallSimulatorApp() {
     val context = LocalContext.current
     var name by remember { mutableStateOf("") }
     var number by remember { mutableStateOf("") }
+    var photoUri by remember { mutableStateOf("") }
+    var profileLabel by remember { mutableStateOf("") }
+    var profiles by remember { mutableStateOf(CallStore.profiles(context)) }
+    var profileMenu by remember { mutableStateOf(false) }
+    var editCallId by remember { mutableStateOf<String?>(null) }
     var ringtoneUri by remember { mutableStateOf(CallStore.setting(context, "ringtone")) }
     var vibration by remember { mutableStateOf(CallStore.setting(context, "vibration", "true") == "true") }
     var volume by remember { mutableFloatStateOf(CallStore.setting(context, "volume", "0.8").toFloatOrNull() ?: 0.8f) }
@@ -60,9 +71,20 @@ fun CallSimulatorApp() {
             result.data?.data?.let { uri ->
                 val projection = arrayOf(ContactsContract.Contacts.DISPLAY_NAME)
                 context.contentResolver.query(uri, projection, null, null, null)?.use { c ->
-                    if (c.moveToFirst()) name = c.getString(0) ?: name
+                    if (c.moveToFirst()) {
+                        name = c.getString(0) ?: name
+                        val id = c.getString(c.getColumnIndexOrThrow(ContactsContract.Contacts._ID))
+                        val photo = Uri.withAppendedPath(Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_URI, id), ContactsContract.Contacts.Photo.CONTENT_DIRECTORY)
+                        if (runCatching { context.contentResolver.openInputStream(photo)?.use { true } ?: false }.getOrDefault(false)) photoUri = photo.toString()
+                    }
                 }
             }
+        }
+    }
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            photoUri = uri.toString()
         }
     }
     val ringtonePicker = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -116,6 +138,19 @@ fun CallSimulatorApp() {
                                 }
                             }
                             Spacer(Modifier.height(20.dp))
+                            Box {
+                                OutlinedButton(onClick = { profiles = CallStore.profiles(context); profileMenu = true }, modifier = Modifier.fillMaxWidth()) {
+                                    Icon(Icons.Rounded.Bookmarks, null); Spacer(Modifier.width(8.dp)); Text("Use saved caller profile"); Spacer(Modifier.weight(1f)); Icon(Icons.Rounded.ArrowDropDown, null)
+                                }
+                                DropdownMenu(expanded = profileMenu, onDismissRequest = { profileMenu = false }) {
+                                    profiles.forEach { profile ->
+                                        DropdownMenuItem(text = { Column { Text(profile.label); Text(profile.name, fontSize = 11.sp, color = Color.Gray) } }, onClick = {
+                                            name = profile.name; number = profile.number; ringtoneUri = profile.ringtoneUri; vibration = profile.vibration; photoUri = profile.photoUri; profileLabel = profile.label; profileMenu = false
+                                        })
+                                    }
+                                    if (profiles.isEmpty()) DropdownMenuItem(text = { Text("No saved profiles yet") }, onClick = { profileMenu = false })
+                                }
+                            }
                             OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Caller name") }, placeholder = { Text("e.g. Alex Morgan") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                             Spacer(Modifier.height(8.dp))
                             OutlinedTextField(value = number, onValueChange = { number = it }, label = { Text("Optional phone number") }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -125,6 +160,18 @@ fun CallSimulatorApp() {
                             }, modifier = Modifier.fillMaxWidth()) {
                                 Icon(Icons.Rounded.PersonSearch, null); Spacer(Modifier.width(8.dp)); Text("Choose from contacts")
                             }
+                            Spacer(Modifier.height(6.dp))
+                            OutlinedButton(onClick = { imagePicker.launch(arrayOf("image/*")) }, modifier = Modifier.fillMaxWidth()) {
+                                Icon(Icons.Rounded.AddAPhoto, null); Spacer(Modifier.width(8.dp)); Text(if (photoUri.isBlank()) "Choose custom caller photo" else "Change caller photo")
+                            }
+                            OutlinedTextField(value = profileLabel, onValueChange = { profileLabel = it }, label = { Text("Profile name (for saving)") }, placeholder = { Text("e.g. Office call") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                            OutlinedButton(onClick = {
+                                if (name.isNotBlank() && profileLabel.isNotBlank()) {
+                                    CallStore.saveProfile(context, CallerProfile(label = profileLabel.trim(), name = name.trim(), number = number.trim(), ringtoneUri = ringtoneUri, vibration = vibration, photoUri = photoUri))
+                                    profiles = CallStore.profiles(context)
+                                    profileLabel = ""
+                                }
+                            }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Rounded.Save, null); Spacer(Modifier.width(8.dp)); Text("Save caller profile") }
                             Spacer(Modifier.height(14.dp))
                             Text("WHEN SHOULD IT RING?", fontSize = 11.sp, color = Color(0xFF9CECCB), fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(8.dp))
@@ -155,18 +202,28 @@ fun CallSimulatorApp() {
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                                 Button(onClick = {
                                     if (name.isBlank()) return@Button
-                                    val i = Intent(context, CallActivity::class.java).putExtra("name", name.trim()).putExtra("number", number.trim()).putExtra("ringtone", ringtoneUri).putExtra("vibration", vibration)
+                                    val i = Intent(context, CallActivity::class.java).putExtra("name", name.trim()).putExtra("number", number.trim()).putExtra("ringtone", ringtoneUri).putExtra("vibration", vibration).putExtra("photoUri", photoUri)
                                     context.startActivity(i)
                                 }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9CECCB), contentColor = Color(0xFF102019))) {
                                     Icon(Icons.Rounded.Call, null); Spacer(Modifier.width(6.dp)); Text("Call now")
                                 }
                                 OutlinedButton(onClick = {
                                     if (name.isBlank() || scheduledAt <= System.currentTimeMillis()) return@OutlinedButton
-                                    val call = SimCall(name = name.trim(), number = number.trim(), timeMillis = scheduledAt, ringtoneUri = ringtoneUri, vibration = vibration)
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                        val alarmManager = context.getSystemService(android.content.Context.ALARM_SERVICE) as AlarmManager
+                                        if (!alarmManager.canScheduleExactAlarms()) {
+                                            context.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM))
+                                            return@OutlinedButton
+                                        }
+                                    }
+                                    val existing = editCallId?.let { id -> calls.firstOrNull { it.id == id } }
+                                    if (existing != null) CallScheduler.cancel(context, existing)
+                                    val call = SimCall(id = existing?.id ?: java.util.UUID.randomUUID().toString(), name = name.trim(), number = number.trim(), timeMillis = scheduledAt, ringtoneUri = ringtoneUri, vibration = vibration, photoUri = photoUri)
                                     CallScheduler.schedule(context, call)
+                                    editCallId = null
                                     calls = CallStore.all(context).sortedBy { it.timeMillis }
                                 }, modifier = Modifier.weight(1f)) {
-                                    Icon(Icons.Rounded.AlarmAdd, null); Spacer(Modifier.width(6.dp)); Text("Schedule")
+                                    Icon(Icons.Rounded.AlarmAdd, null); Spacer(Modifier.width(6.dp)); Text(if (editCallId == null) "Schedule" else "Update schedule")
                                 }
                             }
                             Text("Calls are simulations only. Android may deliver scheduled notifications a little late.", fontSize = 11.sp, color = Color.LightGray)
@@ -194,6 +251,9 @@ fun CallSimulatorApp() {
                                 Text(DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(call.timeMillis)), color = Color.LightGray, fontSize = 12.sp)
                                 Text(call.status, color = if (call.status == "Scheduled") Color(0xFF9CECCB) else Color.LightGray, fontSize = 11.sp)
                             }
+                            if (call.status == "Scheduled") IconButton(onClick = {
+                                name = call.name; number = call.number; scheduledAt = call.timeMillis; ringtoneUri = call.ringtoneUri; vibration = call.vibration; photoUri = call.photoUri; editCallId = call.id
+                            }) { Icon(Icons.Rounded.Edit, "Edit schedule", tint = Color(0xFF9CECCB)) }
                             IconButton(onClick = {
                                 if (call.status == "Scheduled") {
                                     CallScheduler.cancel(context, call)
