@@ -131,7 +131,7 @@ class CallActivity : ComponentActivity() {
                                                 AndroidView(factory = { context -> ImageView(context).apply { scaleType = ImageView.ScaleType.CENTER_CROP; setImageBitmap(loadCallerPhoto(context, photoUri)) } }, update = { view -> view.setImageBitmap(loadCallerPhoto(view.context, photoUri)) }, modifier = Modifier.fillMaxSize().clip(CircleShape))
                                                 Icon(Icons.Rounded.Call, "Swipe left to decline or right to answer", modifier = Modifier.size(26.dp), tint = Color(0xFF50B879))
                                             } else {
-                                                Icon(if (sliderOffset < -maxDragPx * 0.12f) Icons.Rounded.CallEnd else Icons.Rounded.Call, "Swipe left to decline or right to answer", modifier = Modifier.size(34.dp).rotate(if (sliderOffset < 0f) -90f else 0f), tint = if (sliderOffset < -maxDragPx * 0.12f) Color(0xFFE76D6D) else Color(0xFF50B879))
+                                                Icon(if (sliderOffset < -maxDragPx * 0.12f) Icons.Rounded.CallEnd else Icons.Rounded.Call, "Swipe left to decline or right to answer", modifier = Modifier.size(34.dp), tint = if (sliderOffset < -maxDragPx * 0.12f) Color(0xFFE76D6D) else Color(0xFF50B879))
                                             }
                                         }
                                     }
