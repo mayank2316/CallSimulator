@@ -71,21 +71,31 @@ fun CallSimulatorApp() {
         if (result.resultCode == android.app.Activity.RESULT_OK) {
             result.data?.data?.let { uri ->
                 runCatching {
-                    context.contentResolver.query(uri, arrayOf(ContactsContract.CommonDataKinds.Phone.CONTACT_ID, ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, ContactsContract.CommonDataKinds.Phone.NUMBER, ContactsContract.CommonDataKinds.Phone.PHOTO_URI), null, null, null)?.use { cursor ->
+                    context.contentResolver.query(
+                        uri,
+                        arrayOf(ContactsContract.Contacts._ID, ContactsContract.Contacts.DISPLAY_NAME, ContactsContract.Contacts.HAS_PHONE_NUMBER),
+                        null, null, null
+                    )?.use { cursor ->
                         if (cursor.moveToFirst()) {
-                            val contactId = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.CONTACT_ID))
-                            name = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)) ?: name
-                            number = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER)) ?: ""
-                            val photo = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.PHOTO_URI))
-                            photoUri = if (!photo.isNullOrBlank()) persistCallerPhoto(context, Uri.parse(photo)) else ""
-                            if (photoUri.isBlank() && !contactId.isNullOrBlank()) {
-                                val contactUri = Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_URI, contactId)
-                                photoUri = runCatching { ContactsContract.Contacts.openContactPhotoInputStream(context.contentResolver, contactUri)?.use { input ->
+                            val contactId = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.Contacts._ID))
+                            name = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.Contacts.DISPLAY_NAME)) ?: name
+                            number = ""
+                            context.contentResolver.query(
+                                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                                arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
+                                "${ContactsContract.CommonDataKinds.Phone.CONTACT_ID} = ?",
+                                arrayOf(contactId), null
+                            )?.use { phones ->
+                                if (phones.moveToFirst()) number = phones.getString(0).orEmpty()
+                            }
+                            val contactUri = Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_URI, contactId)
+                            photoUri = runCatching {
+                                ContactsContract.Contacts.openContactPhotoInputStream(context.contentResolver, contactUri, true)?.use { input ->
                                     val file = java.io.File(context.filesDir, "caller_photo_" + System.currentTimeMillis() + ".jpg")
                                     file.outputStream().use { output -> input.copyTo(output) }
-                                    if (file.length() > 0) Uri.fromFile(file).toString() else ""
-                                } ?: "" }.getOrDefault("")
-                            }
+                                    if (file.exists() && file.length() > 0) Uri.fromFile(file).toString() else ""
+                                } ?: ""
+                            }.getOrDefault("")
                         }
                     }
                 }
@@ -167,7 +177,7 @@ fun CallSimulatorApp() {
                             OutlinedTextField(value = number, onValueChange = { number = it }, label = { Text("Optional phone number") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                             Spacer(Modifier.height(8.dp))
                             OutlinedButton(onClick = {
-                                contactPicker.launch(Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI))
+                                contactPicker.launch(Intent(Intent.ACTION_PICK, ContactsContract.Contacts.CONTENT_URI))
                             }, modifier = Modifier.fillMaxWidth()) {
                                 Icon(Icons.Rounded.PersonSearch, null); Spacer(Modifier.width(8.dp)); Text("Choose from contacts")
                             }
