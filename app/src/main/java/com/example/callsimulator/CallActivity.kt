@@ -22,10 +22,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.offset
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.delay
 
@@ -82,7 +86,7 @@ class CallActivity : ComponentActivity() {
                     when (state) {
                         "ringing" -> Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
                             Spacer(Modifier.height(72.dp))
-                            Text(caller, color = fg, fontSize = 44.sp, fontWeight = FontWeight.Normal, maxLines = 1)
+                            Text(caller.trim(), color = fg, fontSize = 38.sp, fontWeight = FontWeight.Normal, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                             Spacer(Modifier.height(8.dp))
                             Text(if (number.isBlank()) "Mobile" else "Other $number", color = secondary, fontSize = 19.sp, maxLines = 1)
                             Spacer(Modifier.weight(0.6f))
@@ -90,13 +94,32 @@ class CallActivity : ComponentActivity() {
                             Spacer(Modifier.weight(0.55f))
                             Surface(shape = RoundedCornerShape(40.dp), color = colors.surfaceVariant) { Row(Modifier.padding(horizontal = 26.dp, vertical = 17.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) { Icon(Icons.Rounded.Message, null, tint = colors.primary); Text("Message", color = fg, fontSize = 17.sp, fontWeight = FontWeight.Medium) } }
                             Spacer(Modifier.weight(0.55f))
+                            var sliderOffset by remember { mutableFloatStateOf(0f) }
                             Surface(modifier = Modifier.fillMaxWidth().height(112.dp), shape = RoundedCornerShape(64.dp), color = colors.surfaceVariant) {
-                                Box(Modifier.fillMaxSize()) {
-                                    Row(Modifier.fillMaxSize().padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                                        TextButton(onClick = { finish("Rejected") }) { Text("Decline", color = fg, fontSize = 17.sp) }
-                                        TextButton(onClick = { ringtone?.stop(); startedAt = SystemClock.elapsedRealtime(); state = "connected"; if (callId.isNotBlank()) CallStore.updateStatus(this@CallActivity, callId, "Accepted") }) { Text("Answer", color = fg, fontSize = 17.sp) }
+                                BoxWithConstraints(Modifier.fillMaxSize()) {
+                                    val maxDrag = (maxWidth - 104.dp).value.coerceAtLeast(0f)
+                                    Row(Modifier.fillMaxSize().padding(horizontal = 22.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text("Decline", color = fg, fontSize = 16.sp, maxLines = 1)
+                                        Text("Answer", color = fg, fontSize = 16.sp, maxLines = 1)
                                     }
-                                    FilledIconButton(onClick = { ringtone?.stop(); startedAt = SystemClock.elapsedRealtime(); state = "connected"; if (callId.isNotBlank()) CallStore.updateStatus(this@CallActivity, callId, "Accepted") }, modifier = Modifier.align(Alignment.Center).size(94.dp), shape = RoundedCornerShape(42.dp), colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White, contentColor = Color(0xFF50B879))) { Icon(Icons.Rounded.Call, "Answer call", modifier = Modifier.size(34.dp)) }
+                                    FilledIconButton(
+                                        onClick = { },
+                                        modifier = Modifier.align(Alignment.Center).offset(x = sliderOffset.dp).size(92.dp).pointerInput(maxDrag) {
+                                            detectDragGestures(
+                                                onDragEnd = {
+                                                    when {
+                                                        sliderOffset <= -maxDrag * 0.55f -> finish("Rejected")
+                                                        sliderOffset >= maxDrag * 0.55f -> { ringtone?.stop(); startedAt = SystemClock.elapsedRealtime(); state = "connected"; if (callId.isNotBlank()) CallStore.updateStatus(this@CallActivity, callId, "Accepted") }
+                                                    }
+                                                    sliderOffset = 0f
+                                                },
+                                                onDragCancel = { sliderOffset = 0f },
+                                                onDrag = { change, dragAmount -> change.consume(); sliderOffset = (sliderOffset + dragAmount.x / density).coerceIn(-maxDrag, maxDrag) }
+                                            )
+                                        },
+                                        shape = RoundedCornerShape(42.dp),
+                                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White, contentColor = Color(0xFF50B879))
+                                    ) { Icon(Icons.Rounded.Call, "Swipe left to decline or right to answer", modifier = Modifier.size(34.dp)) }
                                 }
                             }
                             Spacer(Modifier.height(60.dp))
