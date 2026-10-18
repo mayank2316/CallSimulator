@@ -22,6 +22,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -29,7 +30,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.delay
 
@@ -86,13 +86,13 @@ class CallActivity : ComponentActivity() {
                     when (state) {
                         "ringing" -> Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
                             Spacer(Modifier.height(72.dp))
-                            Text(caller.trim(), color = fg, fontSize = 38.sp, fontWeight = FontWeight.Normal, maxLines = 2, softWrap = true, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            Text(caller.trim(), color = fg, fontSize = 38.sp, fontWeight = FontWeight.Normal, maxLines = 3, softWrap = true, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                             Spacer(Modifier.height(8.dp))
-                            Text(if (number.isBlank()) "Mobile" else "Other $number", color = secondary, fontSize = 19.sp, maxLines = 1)
+                            Text(if (number.isBlank()) "Mobile" else number, color = secondary, fontSize = 19.sp, maxLines = 1)
                             Spacer(Modifier.weight(0.6f))
                             CallerAvatar(photoUri, 236)
                             Spacer(Modifier.weight(0.55f))
-                            Surface(shape = RoundedCornerShape(40.dp), color = colors.surfaceVariant) { Row(Modifier.padding(horizontal = 26.dp, vertical = 17.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) { Icon(Icons.Rounded.Message, null, tint = colors.primary); Text("Message", color = fg, fontSize = 17.sp, fontWeight = FontWeight.Medium) } }
+                            Surface(shape = RoundedCornerShape(40.dp), color = colors.surfaceVariant) { Row(Modifier.padding(horizontal = 22.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) { Icon(Icons.Rounded.Message, null, tint = colors.primary); Text("Message", color = fg, fontSize = 16.sp, fontWeight = FontWeight.Medium) } }
                             Spacer(Modifier.weight(0.55f))
                             var sliderOffset by remember { mutableFloatStateOf(0f) }
                             var sliderWidthPx by remember { mutableFloatStateOf(0f) }
@@ -103,7 +103,7 @@ class CallActivity : ComponentActivity() {
                                     val maxDragDp = (maxWidth - 104.dp).coerceAtLeast(0.dp)
                                     val maxDragPx = with(density) { maxDragDp.toPx() }
                                     Row(Modifier.fillMaxSize().padding(horizontal = 22.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                                        Text("Decline", color = if (sliderOffset < -maxDragPx * 0.12f) Color(0xFFE76D6D) else fg, fontSize = 16.sp, maxLines = 1)
+                                        Text("Decline", color = if (sliderOffset < -maxDragPx * 0.12f) Color(0xFFE76D6D) else fg, fontSize = 18.sp, maxLines = 1)
                                         Text("Answer", color = if (sliderOffset > maxDragPx * 0.12f) Color(0xFF55BA7A) else fg, fontSize = 16.sp, maxLines = 1)
                                     }
                                     FilledIconButton(
