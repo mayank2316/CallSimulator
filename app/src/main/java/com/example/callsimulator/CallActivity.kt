@@ -12,6 +12,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -104,7 +105,7 @@ class CallActivity : ComponentActivity() {
                             Spacer(Modifier.height(18.dp))
                             CallerAvatar(photoUri, 108)
                             Text(caller, color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.SemiBold)
-                            Text(if (held) "On hold" else "%02d:%02d".format(elapsed / 60, elapsed % 60), color = CallMint, fontSize = 17.sp)
+                            Text(if (held) "On hold" else "%02d:%02d".format(elapsed / 60, elapsed % 60), color = MaterialTheme.colorScheme.primary, fontSize = 17.sp)
                             if (number.isNotBlank()) Text(number, color = Color(0xFFB8C4CC), fontSize = 13.sp)
                             Spacer(Modifier.height(12.dp))
                             if (keypad) KeypadPanel()
