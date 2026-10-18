@@ -101,8 +101,7 @@ class CallActivity : ComponentActivity() {
                             Spacer(Modifier.height(60.dp))
                         }
                         else -> Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp), modifier = Modifier.fillMaxWidth()) {
-                            Text("SIMULATED CALL", color = MaterialTheme.colorScheme.primary, fontSize = 11.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
-                            Spacer(Modifier.height(10.dp))
+                            Spacer(Modifier.height(18.dp))
                             CallerAvatar(photoUri, 108)
                             Text(caller, color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.SemiBold)
                             Text(if (held) "On hold" else "%02d:%02d".format(elapsed / 60, elapsed % 60), color = CallMint, fontSize = 17.sp)
