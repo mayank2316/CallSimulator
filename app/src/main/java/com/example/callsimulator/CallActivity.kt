@@ -15,6 +15,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,15 +28,11 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.delay
 
-private val CallBg = Color(0xFF101A22)
-private val CallMint = Color(0xFF9CECCB)
 
 class CallActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        window.statusBarColor = android.graphics.Color.rgb(16, 26, 34)
-        window.navigationBarColor = android.graphics.Color.rgb(16, 26, 34)
         setContent {
             val callId = intent.getStringExtra("call_id").orEmpty()
             val caller = intent.getStringExtra("name") ?: "Unknown caller"
@@ -72,37 +70,38 @@ class CallActivity : ComponentActivity() {
                 if (callId.isNotBlank()) CallStore.updateStatus(this@CallActivity, callId, status)
                 finishAndRemoveTask()
             }
-            MaterialTheme(colorScheme = darkColorScheme(primary = CallMint, background = CallBg, surface = Color(0xFF1B2A34))) {
-                Box(Modifier.fillMaxSize().background(CallBg).padding(horizontal = 24.dp, vertical = 28.dp), contentAlignment = Alignment.Center) {
+            val darkMode = isSystemInDarkTheme()
+            val colors = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) { if (darkMode) dynamicDarkColorScheme(this@CallActivity) else dynamicLightColorScheme(this@CallActivity) } else if (darkMode) darkColorScheme() else lightColorScheme()
+            val bg = colors.background
+            val fg = colors.onBackground
+            val secondary = colors.onSurfaceVariant
+            SideEffect { window.statusBarColor = bg.toArgb(); window.navigationBarColor = bg.toArgb(); androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = !darkMode; androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightNavigationBars = !darkMode }
+            MaterialTheme(colorScheme = colors) {
+                Box(Modifier.fillMaxSize().background(bg).padding(horizontal = 24.dp, vertical = 18.dp)) {
                     when (state) {
-                        "ringing" -> Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                            Spacer(Modifier.height(16.dp))
-                            Text("INCOMING CALL", color = CallMint, fontSize = 12.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
-                            Spacer(Modifier.height(28.dp))
-                            CallerAvatar(photoUri, 132)
-                            Text(caller, color = Color.White, fontSize = 31.sp, fontWeight = FontWeight.SemiBold)
-                            Text(number.ifBlank { "Mobile · simulated call" }, color = Color(0xFFB8C4CC), fontSize = 15.sp)
-                            Spacer(Modifier.weight(1f))
-                            Text("Swipe into the moment", color = Color(0xFF80909B), fontSize = 12.sp)
-                            Spacer(Modifier.height(12.dp))
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    FilledIconButton(onClick = { finish("Rejected") }, modifier = Modifier.size(76.dp), colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color(0xFFE64F5D))) {
-                                        Icon(Icons.Rounded.CallEnd, "Decline", modifier = Modifier.size(32.dp))
+                        "ringing" -> Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Spacer(Modifier.height(72.dp))
+                            Text(caller, color = fg, fontSize = 44.sp, fontWeight = FontWeight.Normal, maxLines = 1)
+                            Spacer(Modifier.height(8.dp))
+                            Text(if (number.isBlank()) "Mobile" else "Other $number", color = secondary, fontSize = 19.sp, maxLines = 1)
+                            Spacer(Modifier.weight(0.6f))
+                            CallerAvatar(photoUri, 236)
+                            Spacer(Modifier.weight(0.55f))
+                            Surface(shape = RoundedCornerShape(40.dp), color = colors.surfaceVariant) { Row(Modifier.padding(horizontal = 26.dp, vertical = 17.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) { Icon(Icons.Rounded.Message, null, tint = colors.primary); Text("Message", color = fg, fontSize = 17.sp, fontWeight = FontWeight.Medium) } }
+                            Spacer(Modifier.weight(0.55f))
+                            Surface(modifier = Modifier.fillMaxWidth().height(112.dp), shape = RoundedCornerShape(64.dp), color = colors.surfaceVariant) {
+                                Box(Modifier.fillMaxSize()) {
+                                    Row(Modifier.fillMaxSize().padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                                        TextButton(onClick = { finish("Rejected") }) { Text("Decline", color = fg, fontSize = 17.sp) }
+                                        TextButton(onClick = { ringtone?.stop(); startedAt = SystemClock.elapsedRealtime(); state = "connected"; if (callId.isNotBlank()) CallStore.updateStatus(this@CallActivity, callId, "Accepted") }) { Text("Answer", color = fg, fontSize = 17.sp) }
                                     }
-                                    Text("Decline", color = Color.White, fontSize = 13.sp)
-                                }
-                                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    FilledIconButton(onClick = { ringtone?.stop(); startedAt = SystemClock.elapsedRealtime(); state = "connected"; if (callId.isNotBlank()) CallStore.updateStatus(this@CallActivity, callId, "Accepted") }, modifier = Modifier.size(76.dp), colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color(0xFF25C477))) {
-                                        Icon(Icons.Rounded.Call, "Accept", modifier = Modifier.size(32.dp))
-                                    }
-                                    Text("Accept", color = Color.White, fontSize = 13.sp)
+                                    FilledIconButton(onClick = { ringtone?.stop(); startedAt = SystemClock.elapsedRealtime(); state = "connected"; if (callId.isNotBlank()) CallStore.updateStatus(this@CallActivity, callId, "Accepted") }, modifier = Modifier.align(Alignment.Center).size(94.dp), shape = RoundedCornerShape(42.dp), colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White, contentColor = Color(0xFF50B879))) { Icon(Icons.Rounded.Call, "Answer call", modifier = Modifier.size(34.dp)) }
                                 }
                             }
-                            Spacer(Modifier.height(24.dp))
+                            Spacer(Modifier.height(60.dp))
                         }
                         else -> Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp), modifier = Modifier.fillMaxWidth()) {
-                            Text("SIMULATED CALL", color = CallMint, fontSize = 11.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
+                            Text("SIMULATED CALL", color = MaterialTheme.colorScheme.primary, fontSize = 11.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(10.dp))
                             CallerAvatar(photoUri, 108)
                             Text(caller, color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.SemiBold)
