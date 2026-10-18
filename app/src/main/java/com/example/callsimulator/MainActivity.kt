@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,15 +70,20 @@ fun CallSimulatorApp() {
     val contactPicker = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK) {
             result.data?.data?.let { uri ->
-                val projection = arrayOf(ContactsContract.Contacts.DISPLAY_NAME)
-                context.contentResolver.query(uri, projection, null, null, null)?.use { c ->
-                    if (c.moveToFirst()) {
-                        name = c.getString(0) ?: name
-                        val id = c.getString(c.getColumnIndexOrThrow(ContactsContract.Contacts._ID))
-                        val photo = Uri.withAppendedPath(Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_URI, id), ContactsContract.Contacts.Photo.CONTENT_DIRECTORY)
-                        if (runCatching { context.contentResolver.openInputStream(photo)?.use { true } ?: false }.getOrDefault(false)) photoUri = photo.toString()
+                val projection = arrayOf(ContactsContract.Contacts._ID, ContactsContract.Contacts.DISPLAY_NAME)
+                runCatching {
+                    context.contentResolver.query(uri, projection, null, null, null)?.use { c ->
+                        if (c.moveToFirst()) {
+                            val contactId = c.getString(c.getColumnIndexOrThrow(ContactsContract.Contacts._ID))
+                            name = c.getString(c.getColumnIndexOrThrow(ContactsContract.Contacts.DISPLAY_NAME)) ?: name
+                            context.contentResolver.query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI, arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER), "${ContactsContract.CommonDataKinds.Phone.CONTACT_ID} = ?", arrayOf(contactId), null)?.use { phones -> if (phones.moveToFirst()) number = phones.getString(0) ?: number }
+                            val contactUri = Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_URI, contactId)
+                            val hasPhoto = ContactsContract.Contacts.openContactPhotoInputStream(context.contentResolver, contactUri)?.use { true } ?: false
+                            photoUri = if (hasPhoto) Uri.withAppendedPath(contactUri, ContactsContract.Contacts.Photo.CONTENT_DIRECTORY).toString() else ""
+                        }
                     }
                 }
+
             }
         }
     }
@@ -95,15 +101,14 @@ fun CallSimulatorApp() {
         }
     }
 
-    MaterialTheme(colorScheme = darkColorScheme(
-        primary = Color(0xFF9CECCB), secondary = Color(0xFF82D9B4),
-        background = Color(0xFF0D1412), surface = Color(0xFF17211E)
-    )) {
-        Scaffold(containerColor = Color(0xFF0D1412), topBar = {
+    val darkMode = isSystemInDarkTheme()
+    val systemScheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) { if (darkMode) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context) } else if (darkMode) darkColorScheme() else lightColorScheme()
+    MaterialTheme(colorScheme = systemScheme) {
+        Scaffold(containerColor = MaterialTheme.colorScheme.background, topBar = {
             TopAppBar(
-                title = { Column { Text("Call Simulator", fontWeight = FontWeight.Bold); Text("A little escape, on your schedule", fontSize = 12.sp, color = Color.LightGray) } },
+                title = { Column { Text("Call Simulator", fontWeight = FontWeight.Bold); Text("A little escape, on your schedule", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) } },
                 actions = { IconButton(onClick = { showSettings = !showSettings }) { Icon(Icons.Rounded.Settings, "Settings") } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0D1412), titleContentColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background, titleContentColor = MaterialTheme.colorScheme.onBackground)
             )
         }) { padding ->
             if (showSettings) {
