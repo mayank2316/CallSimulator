@@ -25,7 +25,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -130,8 +129,7 @@ class CallActivity : ComponentActivity() {
                                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                             if (photoUri.isNotBlank()) {
                                                 AndroidView(factory = { context -> ImageView(context).apply { scaleType = ImageView.ScaleType.CENTER_CROP; setImageBitmap(loadCallerPhoto(context, photoUri)) } }, update = { view -> view.setImageBitmap(loadCallerPhoto(view.context, photoUri)) }, modifier = Modifier.fillMaxSize().clip(CircleShape))
-                                                val progress = (kotlin.math.abs(sliderOffset) / maxDragPx.coerceAtLeast(1f)).coerceIn(0f, 1f)
-                                                Icon(Icons.Rounded.Call, "Swipe left to decline or right to answer", modifier = Modifier.size(26.dp).rotate(if (sliderOffset < 0f) -90f * progress else 90f * progress), tint = Color(0xFF50B879))
+                                                Icon(Icons.Rounded.Call, "Swipe left to decline or right to answer", modifier = Modifier.size(26.dp), tint = Color(0xFF50B879))
                                             } else {
                                                 Icon(if (sliderOffset < -maxDragPx * 0.12f) Icons.Rounded.CallEnd else Icons.Rounded.Call, "Swipe left to decline or right to answer", modifier = Modifier.size(34.dp).rotate(if (sliderOffset < 0f) -90f else 0f), tint = if (sliderOffset < -maxDragPx * 0.12f) Color(0xFFE76D6D) else Color(0xFF50B879))
                                             }
@@ -213,6 +211,10 @@ private fun KeypadPanel() {
 private fun loadCallerPhoto(context: Context, value: String): Bitmap? {
     if (value.isBlank()) return null
     return runCatching {
-        context.contentResolver.openInputStream(Uri.parse(value))?.use { stream -> BitmapFactory.decodeStream(stream) }
+        when (Uri.parse(value).scheme) {
+            "file" -> Uri.parse(value).path?.let { BitmapFactory.decodeFile(it) }
+            "content", "android.resource" -> context.contentResolver.openInputStream(Uri.parse(value))?.use { stream -> BitmapFactory.decodeStream(stream) }
+            else -> null
+        }
     }.getOrNull()
 }
