@@ -114,7 +114,7 @@ class CallActivity : ComponentActivity() {
                                                     sliderOffset = 0f
                                                 },
                                                 onDragCancel = { sliderOffset = 0f },
-                                                onDrag = { change, dragAmount -> change.consume(); sliderOffset = (sliderOffset + dragAmount.x / density).coerceIn(-maxDrag, maxDrag) }
+                                                onDrag = { change, dragAmount -> change.consume(); sliderOffset = (sliderOffset + dragAmount.x / this@CallActivity.resources.displayMetrics.density).coerceIn(-maxDrag, maxDrag) }
                                             )
                                         },
                                         shape = RoundedCornerShape(42.dp),
