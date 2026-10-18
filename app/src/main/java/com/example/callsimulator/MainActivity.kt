@@ -79,7 +79,7 @@ fun CallSimulatorApp() {
                             context.contentResolver.query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI, arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER), "${ContactsContract.CommonDataKinds.Phone.CONTACT_ID} = ?", arrayOf(contactId), null)?.use { phones -> if (phones.moveToFirst()) number = phones.getString(0) ?: number }
                             val contactUri = Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_URI, contactId)
                             val hasPhoto = ContactsContract.Contacts.openContactPhotoInputStream(context.contentResolver, contactUri)?.use { true } ?: false
-                            photoUri = if (hasPhoto) Uri.withAppendedPath(contactUri, ContactsContract.Contacts.Photo.CONTENT_DIRECTORY).toString() else ""
+                            photoUri = if (hasPhoto) persistCallerPhoto(context, Uri.withAppendedPath(contactUri, ContactsContract.Contacts.Photo.CONTENT_DIRECTORY)) else ""
                         }
                     }
                 }
@@ -90,7 +90,7 @@ fun CallSimulatorApp() {
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-            photoUri = uri.toString()
+            photoUri = persistCallerPhoto(context, uri)
         }
     }
     val ringtonePicker = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -274,4 +274,13 @@ fun CallSimulatorApp() {
             }
         }
     }
+}
+
+
+private fun persistCallerPhoto(context: android.content.Context, uri: Uri): String {
+    return runCatching {
+        val file = java.io.File(context.filesDir, "caller_photo_${System.currentTimeMillis()}.jpg")
+        context.contentResolver.openInputStream(uri)?.use { input -> file.outputStream().use { output -> input.copyTo(output) } }
+        if (file.exists() && file.length() > 0) Uri.fromFile(file).toString() else ""
+    }.getOrDefault("")
 }
