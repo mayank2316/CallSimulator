@@ -153,7 +153,7 @@ private fun CallerAvatar(photoUri: String, diameter: Int) {
 @Composable
 private fun CallControl(label: String, active: Boolean, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.width(84.dp)) {
-        FilledIconButton(onClick = onClick, modifier = Modifier.size(60.dp), colors = IconButtonDefaults.filledIconButtonColors(containerColor = if (active) CallMint else Color(0xFF30404B), contentColor = if (active) Color(0xFF102019) else Color.White)) {
+        FilledIconButton(onClick = onClick, modifier = Modifier.size(60.dp), colors = IconButtonDefaults.filledIconButtonColors(containerColor = if (active) MaterialTheme.colorScheme.primary else Color(0xFF30404B), contentColor = if (active) Color(0xFF102019) else Color.White)) {
             Icon(icon, label, modifier = Modifier.size(23.dp))
         }
         Text(label, color = Color.White, fontSize = 11.sp)
