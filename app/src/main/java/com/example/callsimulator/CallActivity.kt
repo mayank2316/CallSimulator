@@ -86,7 +86,7 @@ class CallActivity : ComponentActivity() {
                     when (state) {
                         "ringing" -> Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
                             Spacer(Modifier.height(72.dp))
-                            Text(caller.trim(), color = fg, fontSize = 38.sp, fontWeight = FontWeight.Normal, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            Text(caller.trim(), color = fg, fontSize = 38.sp, fontWeight = FontWeight.Normal, maxLines = 2, softWrap = true, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                             Spacer(Modifier.height(8.dp))
                             Text(if (number.isBlank()) "Mobile" else "Other $number", color = secondary, fontSize = 19.sp, maxLines = 1)
                             Spacer(Modifier.weight(0.6f))
@@ -95,31 +95,35 @@ class CallActivity : ComponentActivity() {
                             Surface(shape = RoundedCornerShape(40.dp), color = colors.surfaceVariant) { Row(Modifier.padding(horizontal = 26.dp, vertical = 17.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) { Icon(Icons.Rounded.Message, null, tint = colors.primary); Text("Message", color = fg, fontSize = 17.sp, fontWeight = FontWeight.Medium) } }
                             Spacer(Modifier.weight(0.55f))
                             var sliderOffset by remember { mutableFloatStateOf(0f) }
+                            var sliderWidthPx by remember { mutableFloatStateOf(0f) }
+                            val density = androidx.compose.ui.platform.LocalDensity.current
+                            val sliderMaxPx = with(density) { (maxOf(0.dp,  (350.dp - 104.dp))).toPx() }
                             Surface(modifier = Modifier.fillMaxWidth().height(112.dp), shape = RoundedCornerShape(64.dp), color = colors.surfaceVariant) {
                                 BoxWithConstraints(Modifier.fillMaxSize()) {
-                                    val maxDrag = (maxWidth - 104.dp).value.coerceAtLeast(0f)
+                                    val maxDragDp = (maxWidth - 104.dp).coerceAtLeast(0.dp)
+                                    val maxDragPx = with(density) { maxDragDp.toPx() }
                                     Row(Modifier.fillMaxSize().padding(horizontal = 22.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                                        Text("Decline", color = fg, fontSize = 16.sp, maxLines = 1)
-                                        Text("Answer", color = fg, fontSize = 16.sp, maxLines = 1)
+                                        Text("Decline", color = if (sliderOffset < -maxDragPx * 0.12f) Color(0xFFE76D6D) else fg, fontSize = 16.sp, maxLines = 1)
+                                        Text("Answer", color = if (sliderOffset > maxDragPx * 0.12f) Color(0xFF55BA7A) else fg, fontSize = 16.sp, maxLines = 1)
                                     }
                                     FilledIconButton(
                                         onClick = { },
-                                        modifier = Modifier.align(Alignment.Center).offset(x = sliderOffset.dp).size(92.dp).pointerInput(maxDrag) {
+                                        modifier = Modifier.align(Alignment.Center).offset(x = with(density) { sliderOffset.toDp() }).size(92.dp).pointerInput(maxDragPx) {
                                             detectDragGestures(
                                                 onDragEnd = {
                                                     when {
-                                                        sliderOffset <= -maxDrag * 0.55f -> finish("Rejected")
-                                                        sliderOffset >= maxDrag * 0.55f -> { ringtone?.stop(); startedAt = SystemClock.elapsedRealtime(); state = "connected"; if (callId.isNotBlank()) CallStore.updateStatus(this@CallActivity, callId, "Accepted") }
+                                                        sliderOffset <= -maxDragPx * 0.55f -> finish("Rejected")
+                                                        sliderOffset >= maxDragPx * 0.55f -> { ringtone?.stop(); startedAt = SystemClock.elapsedRealtime(); state = "connected"; if (callId.isNotBlank()) CallStore.updateStatus(this@CallActivity, callId, "Accepted") }
                                                     }
                                                     sliderOffset = 0f
                                                 },
                                                 onDragCancel = { sliderOffset = 0f },
-                                                onDrag = { change, dragAmount -> change.consume(); sliderOffset = (sliderOffset + dragAmount.x / this@CallActivity.resources.displayMetrics.density).coerceIn(-maxDrag, maxDrag) }
+                                                onDrag = { change, dragAmount -> change.consume(); sliderOffset = (sliderOffset + dragAmount.x).coerceIn(-maxDragPx, maxDragPx) }
                                             )
                                         },
                                         shape = RoundedCornerShape(42.dp),
-                                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White, contentColor = Color(0xFF50B879))
-                                    ) { Icon(Icons.Rounded.Call, "Swipe left to decline or right to answer", modifier = Modifier.size(34.dp)) }
+                                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White, contentColor = if (sliderOffset < 0) Color(0xFFE76D6D) else Color(0xFF50B879))
+                                    ) { Icon(if (sliderOffset < -maxDragPx * 0.15f) Icons.Rounded.CallEnd else Icons.Rounded.Call, "Swipe left to decline or right to answer", modifier = Modifier.size(34.dp)) }
                                 }
                             }
                             Spacer(Modifier.height(60.dp))
