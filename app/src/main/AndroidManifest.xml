@@ -16,6 +16,7 @@
         </activity>
         <activity android:name=".CallActivity" android:exported="false" />
         <receiver android:name=".CallAlarmReceiver" android:exported="false" />
+        <receiver android:name=".CallNotificationActionReceiver" android:exported="false" />
         <receiver android:name=".BootReceiver" android:enabled="true" android:exported="false">
             <intent-filter><action android:name="android.intent.action.BOOT_COMPLETED" /></intent-filter>
         </receiver>
