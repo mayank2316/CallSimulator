@@ -7,6 +7,9 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.SystemClock
 import android.widget.ImageView
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.content.Context
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -22,7 +25,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.input.pointer.pointerInput
@@ -127,7 +129,7 @@ class CallActivity : ComponentActivity() {
                                     ) {
                                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                             if (photoUri.isNotBlank()) {
-                                                AndroidView(factory = { context -> ImageView(context).apply { scaleType = ImageView.ScaleType.CENTER_CROP; setImageURI(runCatching { Uri.parse(photoUri) }.getOrNull()) } }, update = { view -> runCatching { view.setImageURI(Uri.parse(photoUri)) } }, modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(42.dp)))
+                                                AndroidView(factory = { context -> ImageView(context).apply { scaleType = ImageView.ScaleType.CENTER_CROP; setImageBitmap(loadCallerPhoto(context, photoUri)) } }, update = { view -> view.setImageBitmap(loadCallerPhoto(view.context, photoUri)) }, modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(42.dp)))
                                             } else { Icon(Icons.Rounded.Person, "Caller photo", modifier = Modifier.size(36.dp), tint = Color(0xFF50B879)) }
                                             val progress = (kotlin.math.abs(sliderOffset) / maxDragPx.coerceAtLeast(1f)).coerceIn(0f, 1f)
                                             Icon(if (sliderOffset < -maxDragPx * 0.12f) Icons.Rounded.CallEnd else Icons.Rounded.Call, "Swipe left to decline or right to answer", modifier = Modifier.size(26.dp).rotate(if (sliderOffset < 0f) -90f * progress else 90f * progress), tint = Color.White)
@@ -177,9 +179,9 @@ private fun CallerAvatar(photoUri: String, diameter: Int) {
             AndroidView(factory = { context ->
                 ImageView(context).apply {
                     scaleType = ImageView.ScaleType.CENTER_CROP
-                    setImageURI(runCatching { Uri.parse(photoUri) }.getOrNull())
+                    setImageBitmap(loadCallerPhoto(context, photoUri))
                 }
-            }, update = { view -> runCatching { view.setImageURI(Uri.parse(photoUri)) } }, modifier = Modifier.fillMaxSize())
+            }, update = { view -> view.setImageBitmap(loadCallerPhoto(view.context, photoUri)) }, modifier = Modifier.fillMaxSize())
         } else {
             Icon(Icons.Rounded.Person, null, tint = Color.White, modifier = Modifier.size((diameter * 0.52f).dp))
         }
@@ -203,4 +205,12 @@ private fun KeypadPanel() {
             Text(row, color = Color.White, fontSize = 20.sp, modifier = Modifier.padding(5.dp))
         }
     }
+}
+
+
+private fun loadCallerPhoto(context: Context, value: String): Bitmap? {
+    if (value.isBlank()) return null
+    return runCatching {
+        context.contentResolver.openInputStream(Uri.parse(value))?.use { stream -> BitmapFactory.decodeStream(stream) }
+    }.getOrNull()
 }
