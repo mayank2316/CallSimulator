@@ -144,6 +144,8 @@ class CallActivity : ComponentActivity() {
                                             tint = if (sliderOffset < -maxDragPx * 0.12f) Color(0xFFE76D6D) else Color(0xFF50B879)
                                         )
                                     }
+                                }
+                            }
                             Spacer(Modifier.height(60.dp))
                         }
                         else -> Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp), modifier = Modifier.fillMaxWidth()) {
